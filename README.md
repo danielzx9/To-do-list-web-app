@@ -26,5 +26,5 @@ Una aplicación web para gestionar tareas, desarrollada como parte de mi portafo
 Clona el repositorio:
 
 ```bash
-git clone https://github.com/tu-usuario/todo-app.git
+git clone https://github.com/danielzx9/To-do-list-web-app.git
 cd todo-app
