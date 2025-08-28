@@ -1,11 +1,12 @@
 const express = require("express");
 const router = express.Router();
 const Task = require("../models/Task");
+const auth = require("../middleware/authMiddleware");
 
 //get all tasks
-router.get("/", auth ,async (req, res) => {
-const tasks = await Task.find({ user: req.user.userId });
-res.json(tasks);
+router.get("/", auth, async (req, res) => {
+    const tasks = await Task.find({ user: req.user.userId });
+    res.json(tasks);
 });
 
 //create a task

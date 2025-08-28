@@ -1,77 +1,135 @@
 import { useEffect, useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { useAuth } from './AuthContext.jsx'
 import { getTasks, createTask, updateTask, deleteTask } from './services/taskService';
-
+import AuthLayout from './components/layout/AuthLayout.jsx';
+import AuthForm from './components/forms/AuthForm.jsx';
+import NewTaskForm from './components/forms/NewTaskForm.jsx';
+import TaskList from './components/layout/TaskList.jsx';
+import Button from './components/ui/Button.jsx';
 
 function App() {
-
+  const { isAuthenticated, token, logout } = useAuth();
   const [tasks, setTasks] = useState([]);
-  const [newTitle, setNewTitle] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
-  useEffect(() => {fetchTasks();}, []);
+  useEffect(() => {
+    if (isAuthenticated && token) {
+      fetchTasks();
+    }
+  }, [isAuthenticated, token]);
 
   const fetchTasks = async () => {
     try {
+      setIsLoading(true);
       const res = await getTasks();
       setTasks(res.data);
     } catch (error) {
       console.error('Error fetching tasks:', error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const handleCreate = async () => {
-    if(!newTitle.trim()) return;
+  const handleCreateTask = async (title) => {
     try {
-      const res = await createTask({ title: newTitle });
+      const res = await createTask({ title });
       setTasks([...tasks, res.data]);
-      setNewTitle('');
     } catch (error) {
-      console.error('Error creating task:', error); 
+      console.error('Error creating task:', error);
+      alert('Error al crear la tarea. Intenta de nuevo.');
     }
   };
 
-  const toggleTask = async (id, completed) => {
-    const res = await updateTask(id, { completed: !completed });
-    setTasks(tasks.map((t) => t._id === id ? res.data : t));
+  const handleToggleTask = async (id, completed) => {
+    try {
+      const res = await updateTask(id, { completed: !completed });
+      setTasks(tasks.map((t) => t._id === id ? res.data : t));
+    } catch (error) {
+      console.error('Error updating task:', error);
+      alert('Error al actualizar la tarea. Intenta de nuevo.');
+    }
   };
 
-  const handleDelete = async (id) => {
-    await deleteTask(id);
-    setTasks(tasks.filter((t) => t._id !== id));
+  const handleDeleteTask = async (id) => {
+    try {
+      await deleteTask(id);
+      setTasks(tasks.filter((t) => t._id !== id));
+    } catch (error) {
+      console.error('Error deleting task:', error);
+      alert('Error al eliminar la tarea. Intenta de nuevo.');
+    }
   };
 
+  const handleLogout = () => {
+    logout();
+    setTasks([]);
+  };
 
-  return (<div className="max-w-xl mx-auto p-4">
-    <h1 className="text-2xl font-bold mb-4">To-Do List</h1>
-    <div className="flex mb-4">
-      <input
-        type="text"
-        className="border p-2 w-full"
-        placeholder="Nueva tarea"
-        value={newTitle}
-        onChange={(e) => setNewTitle(e.target.value)}
-      />
-      <button className="ml-2 bg-blue-500 text-white px-4 py-2 rounded" onClick={handleCreate}>
-        Agregar
-      </button>
+  // Si no está autenticado, mostrar pantalla de autenticación
+  if (!isAuthenticated) {
+    return (
+      <AuthLayout>
+        <AuthForm />
+      </AuthLayout>
+    );
+  }
+
+  // Si está autenticado, mostrar la aplicación principal
+  return (
+    <div className="main-container">
+      <div className="main-content">
+        {/* Header */}
+        <header className="app-header">
+          <div className="header-content">
+            <div className="header-info">
+              <h1>To-Do List</h1>
+              <p>Gestiona tus tareas de manera eficiente</p>
+            </div>
+            <Button
+              variant="danger"
+              size="md"
+              onClick={handleLogout}
+              className="btn btn-danger"
+            >
+              Cerrar Sesión
+            </Button>
+          </div>
+        </header>
+
+        {/* Main Content */}
+        <main>
+          {/* New Task Form */}
+          <div className="content-section">
+            <h2 className="section-title">Nueva Tarea</h2>
+            <NewTaskForm onSubmit={handleCreateTask} disabled={isLoading} />
+          </div>
+
+          {/* Tasks List */}
+          <div className="content-section">
+            <div className="task-list-header">
+              <h2 className="section-title">Mis Tareas</h2>
+              <span className="task-count">
+                {tasks.length} tarea{tasks.length !== 1 ? 's' : ''}
+              </span>
+            </div>
+            
+            {isLoading ? (
+              <div className="loading-container">
+                <div className="loading-spinner"></div>
+                <p className="loading-text">Cargando tareas...</p>
+              </div>
+            ) : (
+              <TaskList
+                tasks={tasks}
+                onToggle={handleToggleTask}
+                onDelete={handleDeleteTask}
+              />
+            )}
+          </div>
+        </main>
+      </div>
     </div>
-    <ul>
-      {tasks.map(task => (
-        <li key={task._id} className="flex justify-between items-center bg-gray-100 p-2 mb-2 rounded">
-          <span
-            onClick={() => toggleTask(task._id, task.completed)}
-            className={`cursor-pointer ${task.completed ? 'line-through text-gray-500' : ''}`}
-          >
-            {task.title}
-          </span>
-          <button onClick={() => handleDelete(task._id)} className="text-red-500 font-bold">X</button>
-        </li>
-      ))}
-    </ul>
-  </div>
-);
+  );
 }
 
 export default App;
